@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Calculadora de IMC</title>
+<style>
+/* ---------- Cores ---------- */
+:root{
+  --fundo:#eef5f3; --cartao:#ffffff; --texto:#17302b; --suave:#51675f; --linha:#cfdcd7;
+  --destaque:#0b6b5c; --sobre-destaque:#ffffff; --zap:#0b7a43; --erro:#b42318;
+  --c-abaixo:#2f6fe4; --c-normal:#1a9a52; --c-sobre:#d9a400; --c-ob1:#ee7a1c; --c-ob2:#d9402b; --c-ob3:#a3211a;
+  color-scheme:light; box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --fundo:#0f1a18; --cartao:#17251f; --texto:#e6f2ee; --suave:#9db5ac; --linha:#2c4039;
+    --destaque:#3cc7b0; --sobre-destaque:#06201b; --zap:#25b868; --erro:#ff8a7a; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --fundo:#0f1a18; --cartao:#17251f; --texto:#e6f2ee; --suave:#9db5ac; --linha:#2c4039;
+  --destaque:#3cc7b0; --sobre-destaque:#06201b; --zap:#25b868; --erro:#ff8a7a; color-scheme:dark;
+}
+
+/* ---------- Base ---------- */
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;min-height:100vh;background:var(--fundo);color:var(--texto);font:400 17px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;display:flex;justify-content:center;padding:20px 14px 40px}
+.cartao{width:100%;max-width:560px;background:var(--cartao);border:1px solid var(--linha);border-radius:18px;padding:26px 22px}
+h1{margin:0 0 6px;font-size:1.75rem;line-height:1.15}
+.sub{margin:0 0 22px;color:var(--suave)}
+:focus-visible{outline:3px solid var(--destaque);outline-offset:3px}
+
+/* ---------- Formulário ---------- */
+form{display:grid;gap:16px}
+.linha{display:grid;gap:16px}
+label{display:grid;gap:6px;font-weight:600}
+label small{font-weight:400;color:var(--suave)}
+input{font:inherit;font-size:16px;padding:13px 14px;border:2px solid var(--linha);border-radius:10px;background:var(--fundo);color:var(--texto);width:100%;-webkit-appearance:none;appearance:none}
+input:focus{border-color:var(--destaque);outline:none}
+.erro{margin:0;color:var(--erro);font-weight:600;min-height:1.4em}
+.botoes{display:grid;gap:10px}
+.botao{display:block;width:100%;text-align:center;text-decoration:none;font:600 1.08rem system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;padding:15px 18px;border-radius:10px;border:2px solid transparent;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.botao-principal{background:var(--destaque);color:var(--sobre-destaque)}
+.botao-simples{background:transparent;color:var(--texto);border-color:var(--linha)}
+.botao-zap{background:var(--zap);color:#fff}
+
+/* ---------- Resultado ---------- */
+#resultado{margin-top:26px;padding-top:24px;border-top:2px dashed var(--linha)}
+#resultado[hidden]{display:none}
+.ola{margin:0;color:var(--suave)}
+.imc-valor{margin:2px 0 10px;font-size:3.6rem;font-weight:800;line-height:1}
+.etiqueta{display:inline-block;padding:6px 14px;border-radius:999px;color:#fff;font-weight:700}
+.situacao{margin:14px 0 0;font-size:1.15rem;font-weight:600}
+.escala{display:flex;gap:3px;margin:26px 0 6px;height:12px;position:relative}
+.escala i{display:block;height:100%;border-radius:3px}
+.marcador{position:absolute;top:-9px;width:0;height:0;transform:translateX(-50%);border-left:8px solid transparent;border-right:8px solid transparent;border-top:11px solid var(--texto)}
+.legenda{display:flex;justify-content:space-between;color:var(--suave);font-size:.82rem}
+.faixa{margin:18px 0 0;padding:14px 16px;background:var(--fundo);border-radius:10px}
+.aviso{margin:18px 0 0;color:var(--suave);font-size:.9rem}
+.zap-bloco{margin-top:20px}
+.zap-bloco p{margin:0 0 10px;font-weight:600}
+
+@media (min-width:520px){
+  .linha{grid-template-columns:1fr 1fr}
+  .botoes{grid-template-columns:2fr 1fr}
+  .cartao{padding:34px 34px}
+  body{align-items:flex-start;padding-top:40px}
+}
+</style>
+</head>
+<body>
+<main class="cartao">
+  <h1>Calculadora de IMC</h1>
+  <p class="sub">Preencha seus dados e veja se o seu peso está dentro do esperado para a sua altura.</p>
+
+  <form id="formulario" novalidate autocomplete="on">
+    <div class="linha">
+      <label for="nome">Nome
+        <input id="nome" type="text" autocomplete="given-name" autocapitalize="words" placeholder="Ex: Maria">
+      </label>
+      <label for="sobrenome">Sobrenome
+        <input id="sobrenome" type="text" autocomplete="family-name" autocapitalize="words" placeholder="Ex: Silva">
+      </label>
+    </div>
+    <div class="linha">
+      <label for="peso">Peso <small>em kg</small>
+        <input id="peso" type="text" inputmode="decimal" autocomplete="off" placeholder="Ex: 70 ou 70,5">
+      </label>
+      <label for="altura">Altura <small>em metros</small>
+        <input id="altura" type="text" inputmode="decimal" autocomplete="off" placeholder="Ex: 1,75">
+      </label>
+    </div>
+    <p class="erro" id="erro" role="alert"></p>
+    <div class="botoes">
+      <button class="botao botao-principal" type="submit">Calcular meu IMC</button>
+      <button class="botao botao-simples" type="button" id="limpar">Limpar</button>
+    </div>
+  </form>
+
+  <section id="resultado" hidden aria-live="polite">
+    <p class="ola" id="ola"></p>
+    <p class="imc-valor" id="imcValor"></p>
+    <span class="etiqueta" id="etiqueta"></span>
+    <p class="situacao" id="situacao"></p>
+
+    <div class="escala" id="escala" aria-hidden="true">
+      <i style="flex:3.5;background:var(--c-abaixo)"></i>
+      <i style="flex:6.5;background:var(--c-normal)"></i>
+      <i style="flex:5;background:var(--c-sobre)"></i>
+      <i style="flex:5;background:var(--c-ob1)"></i>
+      <i style="flex:5;background:var(--c-ob2)"></i>
+      <i style="flex:5;background:var(--c-ob3)"></i>
+      <span class="marcador" id="marcador"></span>
+    </div>
+    <div class="legenda" aria-hidden="true"><span>15</span><span>18,5</span><span>25</span><span>30</span><span>35</span><span>40</span><span>45</span></div>
+
+    <p class="faixa" id="faixa"></p>
+
+    <div class="zap-bloco">
+      <p>Quer mais informações? Fale com a gente.</p>
+      <a class="botao botao-zap" id="zap" href="#" target="_blank" rel="noopener noreferrer">Chamar no WhatsApp</a>
+    </div>
+
+    <p class="aviso">O IMC é uma referência para adultos e não substitui a avaliação de um profissional de saúde. Seus dados ficam só neste aparelho e só vão para o WhatsApp se você tocar no botão.</p>
+  </section>
+</main>
+
+<script>
+// ATENÇÃO: coloque aqui o número do WhatsApp, só com dígitos: 55 + DDD + número.
+// Exemplo: "5511999999999". Se ficar vazio, o WhatsApp abre para escolher o contato.
+var WHATSAPP_NUMERO = "5511950351194";
+
+var formulario = document.getElementById("formulario");
+var mensagemErro = document.getElementById("erro");
+var resultado = document.getElementById("resultado");
+
+// Aceita "70,5" ou "70.5" e devolve número
+function lerNumero(texto) {
+  return parseFloat(String(texto).trim().replace(",", "."));
+}
+
+// Aceita "1,75" (metros) ou "175" (centímetros)
+function lerAlturaEmMetros(texto) {
+  var valor = lerNumero(texto);
+  return valor > 3 ? valor / 100 : valor;
+}
+
+// Mostra números com vírgula, como no Brasil
+function formatar(numero, casas) {
+  return numero.toFixed(casas).replace(".", ",");
+}
+
+// Classificação da OMS para adultos
+function classificar(imc) {
+  if (imc < 18.5) return { nome: "Abaixo do peso", cor: "var(--c-abaixo)", acima: false, frase: "Você está abaixo do peso ideal." };
+  if (imc < 25)   return { nome: "Peso normal", cor: "var(--c-normal)", acima: false, frase: "Você não está acima do peso." };
+  if (imc < 30)   return { nome: "Sobrepeso", cor: "var(--c-sobre)", acima: true, frase: "Você está acima do peso." };
+  if (imc < 35)   return { nome: "Obesidade grau I", cor: "var(--c-ob1)", acima: true, frase: "Você está acima do peso." };
+  if (imc < 40)   return { nome: "Obesidade grau II", cor: "var(--c-ob2)", acima: true, frase: "Você está acima do peso." };
+  return { nome: "Obesidade grau III", cor: "var(--c-ob3)", acima: true, frase: "Você está acima do peso." };
+}
+
+function nomeValido(texto) {
+  return /^[A-Za-zÀ-ÿ'’\- ]{2,}$/.test(texto);
+}
+
+function mostrarErro(texto, campo) {
+  mensagemErro.textContent = texto;
+  if (campo) document.getElementById(campo).focus();
+}
+
+formulario.addEventListener("submit", function (evento) {
+  evento.preventDefault();
+  mensagemErro.textContent = "";
+
+  var nome = document.getElementById("nome").value.trim();
+  var sobrenome = document.getElementById("sobrenome").value.trim();
+  var peso = lerNumero(document.getElementById("peso").value);
+  var altura = lerAlturaEmMetros(document.getElementById("altura").value);
+
+  if (!nomeValido(nome)) { mostrarErro("Digite seu nome.", "nome"); return; }
+  if (!nomeValido(sobrenome)) { mostrarErro("Digite seu sobrenome.", "sobrenome"); return; }
+  if (!(peso >= 20 && peso <= 400)) { mostrarErro("Digite um peso válido, em kg. Ex: 70 ou 70,5.", "peso"); return; }
+  if (!(altura >= 0.5 && altura <= 2.5)) { mostrarErro("Digite uma altura válida. Ex: 1,75.", "altura"); return; }
+
+  var imc = peso / (altura * altura);
+  var grupo = classificar(imc);
+
+  document.getElementById("ola").textContent = nome + ", este é o seu IMC:";
+  document.getElementById("imcValor").textContent = formatar(imc, 1);
+
+  var etiqueta = document.getElementById("etiqueta");
+  etiqueta.textContent = grupo.nome;
+  etiqueta.style.background = grupo.cor;
+
+  document.getElementById("situacao").textContent = grupo.frase;
+
+  
+  var posicao = Math.min(Math.max((imc - 15) / 30, 0), 1) * 100;
+  document.getElementById("marcador").style.left = posicao + "%";
+
+  // Faixa de peso considerada normal para esta altura
+  var pesoMinimo = 18.5 * altura * altura;
+  var pesoMaximo = 24.9 * altura * altura;
+  document.getElementById("faixa").textContent =
+    "Para " + formatar(altura, 2) + " m, o peso considerado normal fica entre " +
+    formatar(pesoMinimo, 1) + " kg e " + formatar(pesoMaximo, 1) + " kg.";
+
+  
+  var mensagem = "Olá! Sou " + nome + " " + sobrenome + ". Calculei meu IMC: " + formatar(imc, 1) +
+    " (" + grupo.nome + "), com " + formatar(peso, 1) + " kg e " + formatar(altura, 2) +
+    " m. Gostaria de mais informações.";
+  var numero = WHATSAPP_NUMERO.replace(/\D/g, "");
+  document.getElementById("zap").href = "https://wa.me/" + numero + "?text=" + encodeURIComponent(mensagem);
+
+  resultado.hidden = false;
+  resultado.scrollIntoView({ behavior: "smooth", block: "start" });
+});
+
+document.getElementById("limpar").addEventListener("click", function () {
+  formulario.reset();
+  mensagemErro.textContent = "";
+  resultado.hidden = true;
+  document.getElementById("nome").focus();
+});
+</script>
+</body>
+</html>
